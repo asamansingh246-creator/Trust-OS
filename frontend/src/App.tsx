@@ -10,7 +10,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 
-const API_BASE = '/api';
+const API_BASE = (import.meta as any).env?.VITE_API_BASE || '/api';
 
 const DEMO_ACCOUNTS = [
   { id: 'M1001', role: 'Trust Management', label: 'M1001 — Trust Chairman (Cumulative & 6-Campus Executive View)' },

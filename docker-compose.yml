@@ -19,5 +19,32 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: trustos_backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      TRUSTOS_PG_HOST: postgres
+      TRUSTOS_PG_PORT: "5432"
+      TRUSTOS_PG_DB: trustos_db
+      TRUSTOS_OWNER_DSN: "host=postgres port=5432 dbname=trustos_db user=postgres password=change_me_local_owner_pw connect_timeout=5"
+      TRUSTOS_APP_DSN: "host=postgres port=5432 dbname=trustos_db user=trustos_app password=trustos_app_local_dev_pw connect_timeout=5"
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: trustos_frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+
 volumes:
   trustos_pgdata:

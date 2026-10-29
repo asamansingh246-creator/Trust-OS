@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: trustos-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHONPATH
+        value: .
+      - key: TRUSTOS_JWT_SECRET
+        generateValue: true
+
+  - type: web
+    name: trustos-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
