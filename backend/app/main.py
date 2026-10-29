@@ -25,7 +25,8 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from app.db import get_owner_conn, get_rls_conn
@@ -2506,3 +2507,43 @@ def list_audit_logs(
             else:
                 cur.execute("SELECT * FROM audit_logs WHERE campus_id = %s ORDER BY created_at DESC LIMIT %s", (user["primary_campus_id"], limit))
             return {"audit_logs": cur.fetchall()}
+
+
+# =============================================================================
+# 11. FRONTEND SPA STATIC SERVING & ROOT FALLBACK (Prevents 404 on Deployment)
+# =============================================================================
+FRONTEND_DIST_DIR = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+
+if (FRONTEND_DIST_DIR / "assets").exists():
+    app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST_DIR / "assets")), name="frontend_assets")
+
+
+@app.get("/", include_in_schema=False)
+def serve_root():
+    index_file = FRONTEND_DIST_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    return JSONResponse({
+        "application": "TrustOS — Multi-Campus Educational Trust Management Platform",
+        "status": "online",
+        "docs_url": "/docs",
+        "health_url": "/api/health"
+    })
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+def serve_spa_fallback(full_path: str):
+    if full_path.startswith("api/") or full_path in ("docs", "openapi.json", "redoc"):
+        raise HTTPException(status_code=404, detail=f"Endpoint '/{full_path}' not found")
+    candidate = FRONTEND_DIST_DIR / full_path
+    if candidate.is_file():
+        return FileResponse(str(candidate))
+    index_file = FRONTEND_DIST_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    return JSONResponse({
+        "application": "TrustOS — Multi-Campus Educational Trust Management Platform",
+        "status": "online",
+        "docs_url": "/docs",
+        "health_url": "/api/health"
+    })
